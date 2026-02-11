@@ -1,0 +1,10 @@
+node_modules/
+dist/
+*.js.map
+*.d.ts.map
+.env
+.env.*
+!.env.example
+.claude
+moltbook-agent-trust-scanner.zip
+AgentShield_Scanner_技術規格 (1).md

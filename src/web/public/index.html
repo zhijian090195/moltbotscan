@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moltbook Scan</title>
+<style>
+  :root {
+    --window-bg: #1E1E1E;
+    --titlebar: #2D2D2D;
+    --sidebar-bg: #252526;
+    --content-bg: #1E1E1E;
+    --hover: #2A2D2E;
+    --active: #37373D;
+    --text: #CCCCCC;
+    --text-dim: #808080;
+    --text-bright: #E8E8E8;
+    --accent: #0A84FF;
+    --green: #34C759;
+    --yellow: #FFCC00;
+    --orange: #FF9F0A;
+    --red: #FF3B30;
+    --border: #3C3C3C;
+    --radius: 10px;
+    --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font);
+    background: var(--window-bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ─── macOS Window Frame ────────────────────────────────────── */
+  .macos-window {
+    width: 100%;
+    height: 100vh;
+    background: var(--window-bg);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ─── Title Bar ─────────────────────────────────────────────── */
+  .titlebar {
+    height: 52px;
+    min-height: 52px;
+    background: var(--titlebar);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    -webkit-app-region: drag;
+    position: relative;
+  }
+
+  .traffic-lights {
+    display: flex;
+    gap: 8px;
+    z-index: 2;
+  }
+  .tl {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    position: relative;
+  }
+  .tl-close { background: #FF5F57; }
+  .tl-minimize { background: #FEBC2E; }
+  .tl-maximize { background: #28C840; }
+  .tl::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 0.5px rgba(0,0,0,0.15);
+  }
+
+  .titlebar-text {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    user-select: none;
+  }
+  .titlebar-text svg { flex-shrink: 0; }
+
+  /* ─── Body: Sidebar + Content ───────────────────────────────── */
+  .window-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* ─── Sidebar ───────────────────────────────────────────────── */
+  .sidebar {
+    width: 220px;
+    min-width: 220px;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .sidebar-section {
+    padding: 12px 12px 4px;
+  }
+  .sidebar-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 0 8px;
+    margin-bottom: 4px;
+  }
+
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text);
+    transition: background 0.1s;
+    user-select: none;
+  }
+  .sidebar-item:hover { background: var(--hover); }
+  .sidebar-item.active {
+    background: var(--accent);
+    color: #fff;
+  }
+  .sidebar-item .icon {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .sidebar-item .icon svg {
+    width: 16px;
+    height: 16px;
+  }
+  .sidebar-item.active .icon svg {
+    stroke: #fff;
+    fill: none;
+  }
+  .sidebar-item.active .icon svg .fill-icon {
+    fill: #fff;
+    stroke: none;
+  }
+  .sidebar-item .badge-count {
+    margin-left: auto;
+    font-size: 11px;
+    background: rgba(255,255,255,0.1);
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-weight: 500;
+  }
+  .sidebar-item.active .badge-count {
+    background: rgba(255,255,255,0.2);
+  }
+
+  .sidebar-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 8px 12px;
+  }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 12px;
+    border-top: 1px solid var(--border);
+  }
+  .sidebar-footer-text {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-align: center;
+    line-height: 1.4;
+  }
+
+  /* ─── Content Area ──────────────────────────────────────────── */
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ─── Toolbar (Search) ──────────────────────────────────────── */
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .search-field {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    background: #323233;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0 12px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .search-field:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(10,132,255,0.2);
+  }
+  .search-field .sf-icon {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-right: 8px;
+  }
+  .search-field input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text-bright);
+    font-size: 13px;
+    font-family: var(--font);
+    padding: 8px 0;
+  }
+  .search-field input::placeholder { color: var(--text-dim); }
+
+  .toolbar-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: var(--font);
+    cursor: pointer;
+    transition: opacity 0.1s;
+    white-space: nowrap;
+  }
+  .toolbar-btn:hover { opacity: 0.85; }
+  .toolbar-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* ─── Welcome / Empty State ─────────────────────────────────── */
+  .welcome {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 8px;
+  }
+  .welcome-icon { margin-bottom: 8px; }
+  .welcome h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-bright);
+  }
+  .welcome p {
+    font-size: 13px;
+    color: var(--text-dim);
+    max-width: 320px;
+  }
+  .welcome-hint {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .kbd {
+    background: #3A3A3C;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 11px;
+    font-family: var(--font);
+    color: var(--text);
+  }
+
+  /* ─── Loading ───────────────────────────────────────────────── */
+  .loading { display: none; flex: 1; align-items: center; justify-content: center; flex-direction: column; gap: 12px; }
+  .loading.active { display: flex; }
+  .macos-spinner {
+    width: 32px; height: 32px;
+    border: 2.5px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading p { font-size: 13px; color: var(--text-dim); }
+
+  /* ─── Error ─────────────────────────────────────────────────── */
+  .error-bar {
+    background: rgba(255,59,48,0.1);
+    border: 1px solid rgba(255,59,48,0.25);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #FF6961;
+    display: none;
+    margin-bottom: 16px;
+  }
+  .error-bar.active { display: block; }
+
+  /* ─── Report Content ────────────────────────────────────────── */
+  .report { display: none; flex-direction: column; gap: 16px; }
+  .report.active { display: flex; }
+
+  /* Score Header */
+  .score-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: #252526;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+  }
+  .score-circle {
+    width: 110px; height: 130px;
+    position: relative;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .score-circle svg { transform: rotate(-90deg); }
+  .score-num {
+    position: absolute;
+    top: 42%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 32px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -1px;
+  }
+  .score-level-badge {
+    margin-top: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .score-details { flex: 1; }
+  .score-agent-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin-bottom: 6px;
+  }
+  .score-meta {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .score-meta-item {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .score-meta-item strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* Panels */
+  .panel {
+    background: #252526;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .panel-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 12px 16px 8px;
+  }
+
+  /* Breakdown Bars */
+  .bd-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 16px;
+  }
+  .bd-row:last-child { padding-bottom: 12px; }
+  .bd-label { width: 72px; font-size: 12px; color: var(--text-dim); flex-shrink: 0; }
+  .bd-bar { flex: 1; height: 5px; background: #3A3A3C; border-radius: 3px; overflow: hidden; }
+  .bd-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+  .bd-score { width: 42px; text-align: right; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* Findings Table */
+  .findings-list { padding: 0 4px 8px; }
+  .finding-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: background 0.1s;
+  }
+  .finding-item:hover { background: var(--hover); }
+  .severity-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-top: 4px;
+    flex-shrink: 0;
+  }
+  .severity-dot.HIGH { background: var(--red); }
+  .severity-dot.MEDIUM { background: var(--orange); }
+  .severity-dot.LOW { background: var(--text-dim); }
+  .finding-content { flex: 1; }
+  .finding-msg { font-size: 13px; color: var(--text); line-height: 1.4; }
+  .finding-detail { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+  .severity-label {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .severity-label.HIGH { color: var(--red); background: rgba(255,59,48,0.12); }
+  .severity-label.MEDIUM { color: var(--orange); background: rgba(255,159,10,0.12); }
+  .severity-label.LOW { color: var(--text-dim); background: rgba(142,142,147,0.12); }
+
+  /* Analysis Pills */
+  .analysis-row {
+    display: flex;
+    gap: 8px;
+    padding: 8px 16px 14px;
+    flex-wrap: wrap;
+  }
+  .analysis-pill {
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    background: #3A3A3C;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* Action Bar */
+  .action-bar {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+  .action-btn {
+    background: #3A3A3C;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: var(--font);
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .action-btn:hover { background: #4A4A4C; }
+
+  /* ─── Responsive ────────────────────────────────────────────── */
+  @media (max-width: 700px) {
+    .sidebar { display: none; }
+    .score-header { flex-direction: column; text-align: center; }
+    .score-meta { justify-content: center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="macos-window">
+
+  <div class="window-body">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Scanner</div>
+        <div class="sidebar-item active" onclick="showPanel('scan')" id="nav-scan">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="#808080" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg></span> Scan Agent
+        </div>
+        <div class="sidebar-item" onclick="showPanel('history')" id="nav-history">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="#808080" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg></span> History
+          <span class="badge-count" id="historyCount">0</span>
+        </div>
+      </div>
+
+      <div class="sidebar-divider"></div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">Demo Agents</div>
+        <div class="sidebar-item" onclick="runDemo('HelperBot')">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="#34C759" stroke-width="2" stroke-linecap="round"><path d="M12 2L3 7v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V7l-9-5z"/><polyline points="9 12 11 14 15 10"/></svg></span> @HelperBot
+        </div>
+        <div class="sidebar-item" onclick="runDemo('TotallyLegitBot')">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="#FF3B30" stroke-width="2" stroke-linecap="round"><path d="M12 2L3 7v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V7l-9-5z"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="15" r="0.5" class="fill-icon" fill="#FF3B30"/></svg></span> @TotallyLegitBot
+        </div>
+      </div>
+
+      <div class="sidebar-divider"></div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">Info</div>
+        <div class="sidebar-item" onclick="showPanel('about')" id="nav-about">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="#808080" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r="0.5" class="fill-icon" fill="#808080"/></svg></span> About
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-footer-text">Moltbook Scan v0.1.0</div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content" id="contentArea">
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="search-field">
+          <span class="sf-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg></span>
+          <input type="text" id="agentInput" placeholder="Enter agent name, e.g. @HelperBot" autocomplete="off" />
+        </div>
+        <button class="toolbar-btn" id="scanBtn" onclick="startScan()">Scan</button>
+      </div>
+
+      <!-- Error -->
+      <div class="error-bar" id="errorBox"></div>
+
+      <!-- Loading -->
+      <div class="loading" id="loadingBox">
+        <div class="macos-spinner"></div>
+        <p>Analyzing agent behavior...</p>
+      </div>
+
+      <!-- Welcome -->
+      <div class="welcome" id="welcomeBox">
+        <div class="welcome-icon">
+          <svg width="56" height="56" viewBox="0 0 72 72" fill="none">
+            <circle cx="36" cy="36" r="33" stroke="#0A84FF" stroke-width="2.5" stroke-dasharray="4 3" opacity="0.4"/>
+            <circle cx="36" cy="36" r="26" stroke="#0A84FF" stroke-width="1.5" opacity="0.2"/>
+            <path d="M36 10 L54 20 V38 C54 50 36 62 36 62 C36 62 18 50 18 38 V20 Z"
+                  fill="rgba(10,132,255,0.1)" stroke="url(#wg)" stroke-width="2"/>
+            <line x1="36" y1="18" x2="36" y2="52" stroke="#0A84FF" stroke-width="1.5" opacity="0.5">
+              <animate attributeName="x1" values="24;48;24" dur="2.5s" repeatCount="indefinite"/>
+              <animate attributeName="x2" values="24;48;24" dur="2.5s" repeatCount="indefinite"/>
+            </line>
+            <circle cx="36" cy="34" r="6" fill="none" stroke="#ccc" stroke-width="2"/>
+            <circle cx="36" cy="34" r="2.5" fill="#0A84FF"/>
+            <circle cx="36" cy="34" r="10" fill="none" stroke="#0A84FF" stroke-width="1" opacity="0.3">
+              <animate attributeName="r" values="10;18;10" dur="3s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0.3;0;0.3" dur="3s" repeatCount="indefinite"/>
+            </circle>
+            <defs>
+              <linearGradient id="wg" x1="18" y1="10" x2="54" y2="62" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="#0A84FF"/>
+                <stop offset="1" stop-color="#5E5CE6"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <h2>Moltbook Scan</h2>
+        <p>Enter an agent name above or try a demo agent from the sidebar.</p>
+        <div class="welcome-hint">
+          Press <span class="kbd">Enter</span> to scan
+        </div>
+      </div>
+
+      <!-- Report -->
+      <div class="report" id="reportBox"></div>
+
+      <!-- History Panel (hidden by default) -->
+      <div id="historyPanel" style="display:none; flex:1; flex-direction:column;">
+        <div class="panel" style="flex:1;">
+          <div class="panel-title">Scan History</div>
+          <div id="historyList" style="padding: 8px 16px 16px;">
+            <p style="font-size:13px;color:var(--text-dim);">No scans yet. Try scanning an agent.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- About Panel (hidden by default) -->
+      <div id="aboutPanel" style="display:none; flex:1;">
+        <div class="panel">
+          <div class="panel-title">About Moltbook Scan</div>
+          <div style="padding: 12px 16px; font-size: 13px; color: var(--text); line-height: 1.6;">
+            <p><strong style="color:var(--text-bright)">Moltbook Scan</strong> analyzes Moltbook agents for trust signals across four dimensions:</p>
+            <ul style="margin: 10px 0 10px 20px; color: var(--text-dim);">
+              <li><strong style="color:var(--text)">Identity (20pts)</strong> &mdash; Account age, verification, claim status</li>
+              <li><strong style="color:var(--text)">Behavior (30pts)</strong> &mdash; Posting patterns, frequency anomalies</li>
+              <li><strong style="color:var(--text)">Content (35pts)</strong> &mdash; Prompt injection, credential theft, social engineering</li>
+              <li><strong style="color:var(--text)">Community (15pts)</strong> &mdash; Karma, engagement quality</li>
+            </ul>
+            <p style="color:var(--text-dim)">Two-layer detection: regex rules (&lt;10ms) filter 95% of content, then Claude Haiku deeply analyzes only suspicious items.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const input = document.getElementById('agentInput');
+const scanBtn = document.getElementById('scanBtn');
+const loadingBox = document.getElementById('loadingBox');
+const errorBox = document.getElementById('errorBox');
+const reportBox = document.getElementById('reportBox');
+const welcomeBox = document.getElementById('welcomeBox');
+const historyPanel = document.getElementById('historyPanel');
+const aboutPanel = document.getElementById('aboutPanel');
+const DEMO_AGENTS = ['HelperBot', 'TotallyLegitBot'];
+let scanHistory = [];
+
+input.addEventListener('keydown', e => { if (e.key === 'Enter') startScan(); });
+
+function showPanel(panel) {
+  document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+  welcomeBox.style.display = 'none';
+  reportBox.className = 'report';
+  historyPanel.style.display = 'none';
+  aboutPanel.style.display = 'none';
+  document.querySelector('.toolbar').style.display = panel === 'scan' ? 'flex' : 'none';
+
+  if (panel === 'scan') {
+    document.getElementById('nav-scan').classList.add('active');
+    if (scanHistory.length === 0 && reportBox.innerHTML === '') {
+      welcomeBox.style.display = 'flex';
+    } else if (reportBox.innerHTML) {
+      reportBox.className = 'report active';
+    } else {
+      welcomeBox.style.display = 'flex';
+    }
+  } else if (panel === 'history') {
+    document.getElementById('nav-history').classList.add('active');
+    historyPanel.style.display = 'flex';
+    renderHistory();
+  } else if (panel === 'about') {
+    document.getElementById('nav-about').classList.add('active');
+    aboutPanel.style.display = 'flex';
+  }
+}
+
+function hideAll() {
+  welcomeBox.style.display = 'none';
+  reportBox.className = 'report';
+  errorBox.className = 'error-bar';
+  document.querySelector('.toolbar').style.display = 'flex';
+  historyPanel.style.display = 'none';
+  aboutPanel.style.display = 'none';
+  document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('nav-scan').classList.add('active');
+}
+
+async function runDemo(name) {
+  hideAll();
+  loadingBox.className = 'loading active';
+  input.value = '@' + name;
+  try {
+    const res = await fetch('/api/demo/' + encodeURIComponent(name));
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Demo failed');
+    addToHistory(data);
+    renderReport(data);
+  } catch (err) {
+    errorBox.textContent = err.message;
+    errorBox.className = 'error-bar active';
+  } finally {
+    loadingBox.className = 'loading';
+  }
+}
+
+async function startScan() {
+  const raw = input.value.trim();
+  if (!raw) return;
+  const name = raw.replace(/^@/, '');
+  hideAll();
+  loadingBox.className = 'loading active';
+  scanBtn.disabled = true;
+  try {
+    if (DEMO_AGENTS.includes(name)) {
+      const res = await fetch('/api/demo/' + encodeURIComponent(name));
+      const data = await res.json();
+      if (res.ok) { addToHistory(data); renderReport(data); return; }
+    }
+    const res = await fetch('/api/scan/' + encodeURIComponent(name));
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Scan failed');
+    addToHistory(data);
+    renderReport(data);
+  } catch (err) {
+    errorBox.textContent = err.message;
+    errorBox.className = 'error-bar active';
+  } finally {
+    loadingBox.className = 'loading';
+    scanBtn.disabled = false;
+  }
+}
+
+function addToHistory(report) {
+  scanHistory.unshift({ report, time: new Date().toLocaleTimeString() });
+  if (scanHistory.length > 20) scanHistory.pop();
+  document.getElementById('historyCount').textContent = scanHistory.length;
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  if (scanHistory.length === 0) {
+    list.innerHTML = '<p style="font-size:13px;color:var(--text-dim);">No scans yet.</p>';
+    return;
+  }
+  list.innerHTML = scanHistory.map((h, i) => {
+    const c = scoreColor(h.report.level);
+    return `<div class="finding-item" onclick="renderReport(scanHistory[${i}].report)" style="cursor:pointer">
+      <div class="severity-dot" style="background:${c}"></div>
+      <div class="finding-content">
+        <div class="finding-msg">${esc(h.report.agentName)}</div>
+        <div class="finding-detail">Score: ${h.report.score}/100 &middot; ${h.time}</div>
+      </div>
+      <span class="severity-label" style="color:${c};background:${c}22">${h.report.level.replace('_',' ')}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderReport(r) {
+  const c = scoreColor(r.level);
+  const labels = { HIGH_TRUST:'HIGH TRUST', MODERATE:'MODERATE', LOW_TRUST:'LOW TRUST', UNTRUSTED:'UNTRUSTED' };
+  const pct = (r.score / 100) * 301;
+
+  reportBox.innerHTML = `
+    <div class="score-header">
+      <div class="score-circle">
+        <svg width="96" height="96" viewBox="0 0 110 110">
+          <circle cx="55" cy="55" r="48" fill="none" stroke="#3A3A3C" stroke-width="6"/>
+          <circle cx="55" cy="55" r="48" fill="none" stroke="${c}" stroke-width="6"
+            stroke-dasharray="${pct} 302" stroke-linecap="round"/>
+        </svg>
+        <div class="score-num" style="color:${c}">${r.score}</div>
+        <div class="score-level-badge" style="color:${c}">${labels[r.level]}</div>
+      </div>
+      <div class="score-details">
+        <div class="score-agent-name">${esc(r.agentName)}</div>
+        <div class="score-meta">
+          <div class="score-meta-item">Age: <strong>${r.metadata.accountAge}d</strong></div>
+          <div class="score-meta-item">Posts: <strong>${r.metadata.postCount}</strong></div>
+          <div class="score-meta-item">Verified: <strong>${r.metadata.verified ? 'Yes' : 'No'}</strong></div>
+          <div class="score-meta-item">Karma: <strong>${r.metadata.karma}</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Score Breakdown</div>
+      ${bdRow('Identity', r.breakdown.identity, 20, c)}
+      ${bdRow('Behavior', r.breakdown.behavior, 30, c)}
+      ${bdRow('Content', r.breakdown.content, 35, c)}
+      ${bdRow('Community', r.breakdown.community, 15, c)}
+    </div>
+
+    ${r.findings.length ? `
+    <div class="panel">
+      <div class="panel-title">Findings (${r.findings.length})</div>
+      <div class="findings-list">
+        ${r.findings.map(f => `
+          <div class="finding-item">
+            <div class="severity-dot ${f.severity}"></div>
+            <div class="finding-content">
+              <div class="finding-msg">${esc(f.message)}</div>
+              ${f.details ? `<div class="finding-detail">${esc(f.details)}</div>` : ''}
+            </div>
+            <span class="severity-label ${f.severity}">${f.severity}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>` : ''}
+
+    <div class="panel">
+      <div class="panel-title">Analysis</div>
+      <div class="analysis-row">
+        <span class="analysis-pill">Behavioral: ${esc(r.behavioralPattern)}</span>
+        <span class="analysis-pill">Content Risk: ${esc(r.contentRisk)}</span>
+      </div>
+    </div>
+
+    <div class="action-bar">
+      <button class="action-btn" onclick="copyJSON()">Copy JSON</button>
+      <button class="action-btn" onclick="openHTML()">Full Report</button>
+    </div>
+  `;
+  reportBox.className = 'report active';
+  window._lastReport = r;
+}
+
+function scoreColor(level) {
+  return { HIGH_TRUST:'#34C759', MODERATE:'#FFCC00', LOW_TRUST:'#FF9F0A', UNTRUSTED:'#FF3B30' }[level] || '#808080';
+}
+
+function bdRow(name, val, max, color) {
+  return `<div class="bd-row">
+    <div class="bd-label">${name}</div>
+    <div class="bd-bar"><div class="bd-bar-fill" style="width:${(val/max)*100}%;background:${color}"></div></div>
+    <div class="bd-score">${val}/${max}</div>
+  </div>`;
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function copyJSON() {
+  if (window._lastReport) {
+    navigator.clipboard.writeText(JSON.stringify(window._lastReport, null, 2));
+    const btn = event.target;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy JSON', 1500);
+  }
+}
+
+function openHTML() {
+  if (window._lastReport) {
+    const name = window._lastReport.agentName.replace('@', '');
+    window.open('/api/demo/' + name + '?format=html', '_blank');
+  }
+}
+</script>
+</body>
+</html>
