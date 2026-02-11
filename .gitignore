@@ -8,3 +8,4 @@ dist/
 .claude
 moltbook-agent-trust-scanner.zip
 AgentShield_Scanner_技術規格 (1).md
+results/dataset-cache.json
