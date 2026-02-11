@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'path';
 import { Scanner } from '../core/scanner.js';
 import { generateDemoReport, getDemoAgentNames } from '../core/demo.js';
-import { formatHTMLReport, formatJSONReport } from '../core/reporter.js';
+import { formatHTMLReport } from '../core/reporter.js';
 
 const app = express();
 const PORT = process.env.PORT || 3847;

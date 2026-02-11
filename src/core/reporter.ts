@@ -25,7 +25,7 @@ export function formatCLIReport(report: TrustReport, verbose = false): string {
   const display = LEVEL_DISPLAY[report.level];
   const width = 48;
   const hr = '\u2550'.repeat(width);
-  const thinHr = '\u2500'.repeat(width);
+  const _thinHr = '\u2500'.repeat(width); // eslint-disable-line @typescript-eslint/no-unused-vars
 
   const lines: string[] = [];
 
@@ -383,6 +383,7 @@ function padRight(str: string, len: number): string {
 }
 
 function stripAnsi(str: string): string {
+  // eslint-disable-next-line no-control-regex
   return str.replace(/\x1b\[[0-9;]*m/g, '');
 }
 

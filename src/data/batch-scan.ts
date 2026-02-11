@@ -8,7 +8,7 @@
  */
 
 import { analyzeContent } from '../analysis/rules.js';
-import { ContentAnalysis, RuleMatch } from '../types/index.js';
+import { ContentAnalysis } from '../types/index.js';
 import * as fs from 'fs';
 import * as path from 'path';
 

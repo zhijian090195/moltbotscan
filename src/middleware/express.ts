@@ -2,6 +2,7 @@ import { ContentScanner } from '../sdk/scanner.js';
 import { ScanResult, MiddlewareOptions } from '../types/index.js';
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       scanResult?: ScanResult;
