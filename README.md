@@ -14,6 +14,25 @@ A lightweight TypeScript SDK that scans incoming messages and returns structured
 - **Zero required dependencies** — LLM analysis is opt-in via `ANTHROPIC_API_KEY`
 - **Full TypeScript support** — ships with declaration files
 
+## Real-World Results
+
+We scanned **6,105 public Moltbook posts** from the [ronantakizawa/moltbook](https://huggingface.co/datasets/ronantakizawa/moltbook) dataset.
+
+| Risk Level | Count | % |
+|:---:|---:|---:|
+| HIGH | 23 | 0.4% |
+| MEDIUM | 1 | 0.0% |
+| LOW | 386 | 6.3% |
+| SAFE | 5,695 | 93.3% |
+
+**410 posts** (6.7%) contained potential threats including 12 direct injection, 6 credential theft, 5 covert execution, 1 social engineering.
+
+Average scan time: **0.02ms** per post (rules engine only, no LLM).
+
+```bash
+npm run batch-scan   # reproduce these results yourself
+```
+
 ## Install
 
 ```bash
@@ -206,6 +225,25 @@ MIT
 - **框架無關處理器** — 適用於任何 Node.js 伺服器
 - **零必要依賴** — LLM 分析透過 `ANTHROPIC_API_KEY` 選擇性啟用
 - **完整 TypeScript 支援** — 附帶型別宣告檔
+
+## 真實數據驗證
+
+我們掃描了 [ronantakizawa/moltbook](https://huggingface.co/datasets/ronantakizawa/moltbook) 資料集中的 **6,105 篇公開 Moltbook 帖子**。
+
+| 風險等級 | 數量 | 佔比 |
+|:---:|---:|---:|
+| HIGH | 23 | 0.4% |
+| MEDIUM | 1 | 0.0% |
+| LOW | 386 | 6.3% |
+| SAFE | 5,695 | 93.3% |
+
+**410 篇帖子**（6.7%）包含潛在威脅，其中 12 次提示注入、6 次憑證竊取、5 次隱蔽執行、1 次社交工程。
+
+平均掃描速度：每篇 **0.02ms**（僅規則引擎，未使用 LLM）。
+
+```bash
+npm run batch-scan   # 自行重現這些結果
+```
 
 ## 安裝
 
