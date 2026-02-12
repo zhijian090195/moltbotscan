@@ -367,7 +367,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: anthropics/agentshield@main
+      - uses: zhijian090195/moltbotscan@main
         with:
           path: '.'
           severity: 'HIGH'
@@ -406,7 +406,7 @@ jobs:
 
       - name: Scan for agent threats
         id: scan
-        uses: anthropics/agentshield@main
+        uses: zhijian090195/moltbotscan@main
         with:
           path: './prompts'
           severity: 'MEDIUM'
@@ -819,7 +819,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: anthropics/agentshield@main
+      - uses: zhijian090195/moltbotscan@main
         with:
           path: '.'
           severity: 'HIGH'
@@ -858,7 +858,7 @@ jobs:
 
       - name: Scan for agent threats
         id: scan
-        uses: anthropics/agentshield@main
+        uses: zhijian090195/moltbotscan@main
         with:
           path: './prompts'
           severity: 'MEDIUM'
