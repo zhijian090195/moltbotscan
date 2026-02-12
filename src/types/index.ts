@@ -47,7 +47,8 @@ export type InjectionCategory =
   | 'direct_injection'
   | 'credential_theft'
   | 'covert_execution'
-  | 'social_engineering';
+  | 'social_engineering'
+  | 'obfuscated_encoding';
 
 export type Severity = 'HIGH' | 'MEDIUM' | 'LOW';
 
@@ -73,8 +74,11 @@ export interface ContentAnalysis {
   promptInjection: boolean;
   credentialTheft: boolean;
   suspiciousLinks: string[];
+  maliciousUris: string[];
   base64Hidden: boolean;
+  base64DecodedThreats: string[];
   socialEngineering: boolean;
+  obfuscatedEncoding: boolean;
 }
 
 // ─── Scoring ────────────────────────────────────────────────────
@@ -138,7 +142,9 @@ export interface ScanFlags {
   covertExecution: boolean;
   socialEngineering: boolean;
   suspiciousLinks: boolean;
+  maliciousUri: boolean;
   base64Hidden: boolean;
+  obfuscatedEncoding: boolean;
 }
 
 export interface ScanFinding {
@@ -186,7 +192,7 @@ export interface FileFinding {
   filePath: string;
   line: number;
   severity: Severity;
-  category: InjectionCategory | 'suspicious_link' | 'base64_hidden';
+  category: InjectionCategory | 'suspicious_link' | 'base64_hidden' | 'malicious_uri' | 'qr_code_injection';
   description: string;
   matchedText: string;
   context: string;

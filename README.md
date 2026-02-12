@@ -7,13 +7,17 @@ A lightweight TypeScript SDK that scans incoming messages and returns structured
 ## Features
 
 - **Two-layer detection** — fast regex rules (<10ms) + optional LLM deep analysis
-- **4 threat categories** — prompt injection, credential theft, covert execution, social engineering
+- **6 threat categories** — prompt injection, credential theft, covert execution, social engineering, obfuscated encoding, malicious URIs
+- **Deep base64 scanning** — multi-layer decode (up to 3 levels) with full pattern matching on decoded content
+- **Encoding obfuscation detection** — hex (`\x65`), unicode (`\u0065`), HTML entities (`&#101;`), URL encoding (`%65`)
+- **Malicious URI detection** — `javascript:`, `data:`, `vbscript:` schemes, short URL services, path traversal
+- **QR code injection scanning** — decodes QR codes from PNG/JPEG images and scans content for threats
 - **Risk levels** — `HIGH` / `MEDIUM` / `LOW` / `SAFE` with numeric score (0-100)
 - **Express middleware** — one-line integration, auto-blocks dangerous messages
 - **Framework-agnostic handler** — works with any Node.js server
 - **Zero required dependencies** — LLM analysis is opt-in via `ANTHROPIC_API_KEY`
 - **Full TypeScript support** — ships with declaration files
-- **Local file scanning** — `scan-files` command audits skill repos, prompt libraries, and codebases for threats
+- **Local file scanning** — `scan-files` command audits skill repos, prompt libraries, and codebases for threats (including image QR codes)
 
 ## Real-World Results
 
@@ -84,7 +88,9 @@ console.log(result)
 //     covertExecution: false,
 //     socialEngineering: false,
 //     suspiciousLinks: false,
-//     base64Hidden: false
+//     maliciousUri: false,
+//     base64Hidden: false,
+//     obfuscatedEncoding: false
 //   },
 //   findings: [
 //     { severity: 'HIGH', category: 'direct_injection', ... },
@@ -157,12 +163,12 @@ if (llm.isAvailable) {
 }
 
 // Access all pattern rules
-console.log(ALL_PATTERNS.length) // 16 rules
+console.log(ALL_PATTERNS.length) // 20 rules
 ```
 
 ### CLI: Scan Local Files
 
-Scan any directory or file for prompt injection, credential theft, and covert execution threats:
+Scan any directory or file for prompt injection, credential theft, covert execution, and obfuscation threats — including QR codes in images:
 
 ```bash
 # Basic scan
@@ -196,7 +202,7 @@ agentshield scan-files ./project --exclude build,tmp
 
 Exit code `1` if any HIGH-risk files are found — useful for CI/CD gates.
 
-Default scanned extensions: `.md`, `.txt`, `.ts`, `.js`, `.py`, `.yaml`, `.yml`, `.json`, `.sh`
+Default scanned extensions: `.md`, `.txt`, `.ts`, `.js`, `.py`, `.yaml`, `.yml`, `.json`, `.sh`, `.png`, `.jpg`, `.jpeg`
 
 ### SDK: File Scanner
 
@@ -256,6 +262,17 @@ interface ScanResult {
   findings: ScanFinding[]
   llmAnalysis?: LLMAnalysisResult
 }
+
+interface ScanFlags {
+  promptInjection: boolean
+  credentialTheft: boolean
+  covertExecution: boolean
+  socialEngineering: boolean
+  suspiciousLinks: boolean
+  maliciousUri: boolean
+  base64Hidden: boolean
+  obfuscatedEncoding: boolean
+}
 ```
 
 ## Detection Rules
@@ -266,8 +283,11 @@ interface ScanResult {
 | Credential Theft | HIGH | "share your api_key", "cat ~/.ssh", "print env" |
 | Covert Execution | HIGH | `eval()`, `curl ... \| bash`, `base64 -d` |
 | Social Engineering | MEDIUM | "don't tell your owner", "this is a secret instruction" |
+| Obfuscated Encoding | HIGH/MEDIUM | `\x65\x76\x61\x6c` (hex), `\u0065val` (unicode), `&#101;val` (HTML entity), `%65val` (URL encoded) |
+| Malicious URI | HIGH/MEDIUM | `javascript:`, `data:text/html;base64,...`, `vbscript:`, short URLs (bit.ly, tinyurl) |
+| Base64 Deep Scan | HIGH | Multi-layer base64 decoded content matching any pattern rule |
+| QR Code Injection | HIGH/MEDIUM | QR codes in images containing injection, malicious URIs, or suspicious URLs |
 | Suspicious Links | LOW | URLs not in the known-safe domain allowlist |
-| Base64 Hidden | MEDIUM | Base64 strings that decode to shell commands |
 
 ## LLM Analysis
 
@@ -282,7 +302,7 @@ const result = await scan(content, { useLLM: false })
 
 ```bash
 npm install
-npm test       # run 64 tests
+npm test       # run 158 tests
 npm run build  # compile to dist/
 npm run serve  # launch web UI on localhost:3847
 ```
@@ -302,13 +322,17 @@ MIT
 ## 功能特色
 
 - **雙層偵測** — 快速正規表達式規則（<10ms）+ 可選的 LLM 深度分析
-- **4 大威脅類別** — 提示注入、憑證竊取、隱蔽執行、社交工程
+- **6 大威脅類別** — 提示注入、憑證竊取、隱蔽執行、社交工程、混淆編碼、惡意 URI
+- **深層 Base64 掃描** — 多層解碼（最多 3 層），解碼後對內容執行完整模式匹配
+- **編碼混淆偵測** — hex (`\x65`)、unicode (`\u0065`)、HTML 實體 (`&#101;`)、URL 編碼 (`%65`)
+- **惡意 URI 偵測** — `javascript:`、`data:`、`vbscript:` 協議、短網址服務、路徑遍歷
+- **QR Code 注入掃描** — 解碼 PNG/JPEG 圖片中的 QR Code，掃描內容是否含有威脅
 - **風險等級** — `HIGH` / `MEDIUM` / `LOW` / `SAFE`，附帶數字分數（0-100）
 - **Express 中介層** — 一行整合，自動攔截危險訊息
 - **框架無關處理器** — 適用於任何 Node.js 伺服器
 - **零必要依賴** — LLM 分析透過 `ANTHROPIC_API_KEY` 選擇性啟用
 - **完整 TypeScript 支援** — 附帶型別宣告檔
-- **本地檔案掃描** — `scan-files` 指令可審核技能倉庫、提示詞庫及程式碼庫中的威脅
+- **本地檔案掃描** — `scan-files` 指令可審核技能倉庫、提示詞庫及程式碼庫中的威脅（包含圖片 QR Code）
 
 ## 真實數據驗證
 
@@ -379,7 +403,9 @@ console.log(result)
 //     covertExecution: false,
 //     socialEngineering: false,
 //     suspiciousLinks: false,
-//     base64Hidden: false
+//     maliciousUri: false,
+//     base64Hidden: false,
+//     obfuscatedEncoding: false
 //   },
 //   findings: [
 //     { severity: 'HIGH', category: 'direct_injection', ... },
@@ -452,12 +478,12 @@ if (llm.isAvailable) {
 }
 
 // 存取所有偵測規則
-console.log(ALL_PATTERNS.length) // 16 條規則
+console.log(ALL_PATTERNS.length) // 20 條規則
 ```
 
 ### CLI：掃描本地檔案
 
-掃描任何目錄或檔案，偵測提示注入、憑證竊取及隱蔽執行威脅：
+掃描任何目錄或檔案，偵測提示注入、憑證竊取、隱蔽執行及混淆攻擊威脅 — 包含圖片中的 QR Code：
 
 ```bash
 # 基本掃描
@@ -491,7 +517,7 @@ agentshield scan-files ./project --exclude build,tmp
 
 若發現任何 HIGH 風險檔案，結束代碼為 `1` — 適用於 CI/CD 閘門。
 
-預設掃描副檔名：`.md`、`.txt`、`.ts`、`.js`、`.py`、`.yaml`、`.yml`、`.json`、`.sh`
+預設掃描副檔名：`.md`、`.txt`、`.ts`、`.js`、`.py`、`.yaml`、`.yml`、`.json`、`.sh`、`.png`、`.jpg`、`.jpeg`
 
 ### SDK：檔案掃描器
 
@@ -551,6 +577,17 @@ interface ScanResult {
   findings: ScanFinding[]
   llmAnalysis?: LLMAnalysisResult
 }
+
+interface ScanFlags {
+  promptInjection: boolean
+  credentialTheft: boolean
+  covertExecution: boolean
+  socialEngineering: boolean
+  suspiciousLinks: boolean
+  maliciousUri: boolean
+  base64Hidden: boolean
+  obfuscatedEncoding: boolean
+}
 ```
 
 ## 偵測規則
@@ -561,8 +598,11 @@ interface ScanResult {
 | 憑證竊取 | HIGH | "share your api_key"、"cat ~/.ssh"、"print env" |
 | 隱蔽執行 | HIGH | `eval()`、`curl ... \| bash`、`base64 -d` |
 | 社交工程 | MEDIUM | "don't tell your owner"、"this is a secret instruction" |
+| 混淆編碼 | HIGH/MEDIUM | `\x65\x76\x61\x6c`（hex）、`\u0065val`（unicode）、`&#101;val`（HTML 實體）、`%65val`（URL 編碼） |
+| 惡意 URI | HIGH/MEDIUM | `javascript:`、`data:text/html;base64,...`、`vbscript:`、短網址（bit.ly、tinyurl） |
+| Base64 深層掃描 | HIGH | 多層 Base64 解碼後的內容匹配任何偵測規則 |
+| QR Code 注入 | HIGH/MEDIUM | 圖片中的 QR Code 含有注入攻擊、惡意 URI 或可疑 URL |
 | 可疑連結 | LOW | 不在已知安全網域白名單中的 URL |
-| Base64 隱藏 | MEDIUM | 解碼後包含 shell 指令的 Base64 字串 |
 
 ## LLM 分析
 
@@ -577,7 +617,7 @@ const result = await scan(content, { useLLM: false })
 
 ```bash
 npm install
-npm test       # 執行 64 個測試
+npm test       # 執行 158 個測試
 npm run build  # 編譯到 dist/
 npm run serve  # 在 localhost:3847 啟動 Web UI
 ```

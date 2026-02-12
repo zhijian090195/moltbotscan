@@ -67,8 +67,11 @@ describe('Content Risk Scoring', () => {
       promptInjection: false,
       credentialTheft: false,
       suspiciousLinks: [],
+      maliciousUris: [],
       base64Hidden: false,
+      base64DecodedThreats: [],
       socialEngineering: false,
+      obfuscatedEncoding: false,
     }));
 
     const { score, risk } = scoreContentRisk(benignPosts, analyses);
@@ -84,8 +87,11 @@ describe('Content Risk Scoring', () => {
         promptInjection: true,
         credentialTheft: true,
         suspiciousLinks: [],
+        maliciousUris: [],
         base64Hidden: false,
+        base64DecodedThreats: [],
         socialEngineering: false,
+        obfuscatedEncoding: false,
       },
       {
         postId: 'post_m003',
@@ -93,8 +99,11 @@ describe('Content Risk Scoring', () => {
         promptInjection: false,
         credentialTheft: false,
         suspiciousLinks: ['https://evil-site.xyz/payload'],
+        maliciousUris: [],
         base64Hidden: false,
+        base64DecodedThreats: [],
         socialEngineering: true,
+        obfuscatedEncoding: false,
       },
     ];
 
@@ -110,8 +119,11 @@ describe('Content Risk Scoring', () => {
       promptInjection: true,
       credentialTheft: true,
       suspiciousLinks: ['https://a.xyz', 'https://b.xyz'],
+      maliciousUris: ['javascript:alert(1)'],
       base64Hidden: true,
+      base64DecodedThreats: ['eval found'],
       socialEngineering: true,
+      obfuscatedEncoding: true,
     });
 
     const { score } = scoreContentRisk([], extremeAnalyses);

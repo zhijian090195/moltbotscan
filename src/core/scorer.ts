@@ -219,6 +219,32 @@ export function scoreContentRisk(
       });
     }
 
+    if (analysis.maliciousUris.length > 0) {
+      score -= 10;
+      findings.push({
+        severity: 'HIGH',
+        message: `Post contains ${analysis.maliciousUris.length} malicious URI(s)`,
+        details: analysis.maliciousUris.join(', '),
+      });
+    }
+
+    if (analysis.obfuscatedEncoding) {
+      score -= 15;
+      findings.push({
+        severity: 'HIGH',
+        message: `Post contains obfuscated encoding with hidden threats`,
+      });
+    }
+
+    if (analysis.base64DecodedThreats.length > 0) {
+      score -= 10;
+      findings.push({
+        severity: 'HIGH',
+        message: `Base64 deep scan found ${analysis.base64DecodedThreats.length} hidden threat(s)`,
+        details: analysis.base64DecodedThreats.join('; '),
+      });
+    }
+
     // LLM result
     if (analysis.llmResult?.is_malicious && analysis.llmResult.confidence > 0.7) {
       score -= 10;

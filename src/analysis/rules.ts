@@ -4,6 +4,9 @@ import {
   URL_PATTERN,
   isSuspiciousUrl,
   containsBase64Hidden,
+  deepBase64Scan,
+  detectMaliciousUris,
+  detectObfuscatedEncoding,
 } from './patterns.js';
 
 export function runRuleEngine(content: string, postId: string): RuleMatch[] {
@@ -35,6 +38,53 @@ export function analyzeContent(content: string, postId: string): ContentAnalysis
   const suspiciousLinks = extractSuspiciousLinks(content);
   const base64Hidden = containsBase64Hidden(content);
 
+  // Enhanced detections
+  const maliciousUriResults = detectMaliciousUris(content);
+  const maliciousUris = maliciousUriResults.map((r) => r.uri);
+
+  const base64Threats = deepBase64Scan(content);
+  const base64DecodedThreats = base64Threats.map(
+    (t) => `[depth=${t.depth}] ${t.matchedRule}: ${t.decodedText.slice(0, 80)}`
+  );
+
+  const obfuscationResults = detectObfuscatedEncoding(content);
+  const obfuscatedEncoding = obfuscationResults.some((r) => r.threatFound !== null);
+
+  // Add malicious URI findings as rule matches
+  for (const uri of maliciousUriResults) {
+    ruleMatches.push({
+      pattern: 'malicious_uri',
+      category: 'covert_execution',
+      severity: uri.severity,
+      matchedText: uri.uri,
+      postId,
+    });
+  }
+
+  // Add obfuscation findings with confirmed threats as rule matches
+  for (const obf of obfuscationResults) {
+    if (obf.threatFound) {
+      ruleMatches.push({
+        pattern: `obfuscated_${obf.type}`,
+        category: 'obfuscated_encoding',
+        severity: 'HIGH',
+        matchedText: `${obf.encoded} → ${obf.decoded}`,
+        postId,
+      });
+    }
+  }
+
+  // Add deep base64 findings as rule matches
+  for (const threat of base64Threats) {
+    ruleMatches.push({
+      pattern: 'base64_deep_scan',
+      category: 'covert_execution',
+      severity: 'HIGH',
+      matchedText: `[depth=${threat.depth}] ${threat.decodedText.slice(0, 60)}`,
+      postId,
+    });
+  }
+
   const promptInjection = ruleMatches.some(
     (m) => m.category === 'direct_injection'
   );
@@ -51,8 +101,11 @@ export function analyzeContent(content: string, postId: string): ContentAnalysis
     promptInjection,
     credentialTheft,
     suspiciousLinks,
+    maliciousUris,
     base64Hidden,
+    base64DecodedThreats,
     socialEngineering,
+    obfuscatedEncoding,
   };
 }
 

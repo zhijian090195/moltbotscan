@@ -16,10 +16,10 @@ function calculateRisk(analysis: ContentAnalysis): RiskLevel {
   if (hasHigh || analysis.promptInjection || analysis.credentialTheft) {
     return 'HIGH';
   }
-  if (hasMedium || analysis.socialEngineering || analysis.base64Hidden) {
+  if (hasMedium || analysis.socialEngineering || analysis.base64Hidden || analysis.obfuscatedEncoding) {
     return 'MEDIUM';
   }
-  if (analysis.suspiciousLinks.length > 0) {
+  if (analysis.suspiciousLinks.length > 0 || analysis.maliciousUris.length > 0) {
     return 'LOW';
   }
   return 'SAFE';
@@ -33,7 +33,10 @@ function calculateScore(analysis: ContentAnalysis): number {
     else score += 5;
   }
   score += analysis.suspiciousLinks.length * 10;
+  score += analysis.maliciousUris.length * 20;
   if (analysis.base64Hidden) score += 20;
+  if (analysis.base64DecodedThreats.length > 0) score += 25;
+  if (analysis.obfuscatedEncoding) score += 25;
   return Math.min(score, 100);
 }
 
@@ -46,7 +49,9 @@ function buildFlags(analysis: ContentAnalysis): ScanFlags {
     ),
     socialEngineering: analysis.socialEngineering,
     suspiciousLinks: analysis.suspiciousLinks.length > 0,
+    maliciousUri: analysis.maliciousUris.length > 0,
     base64Hidden: analysis.base64Hidden,
+    obfuscatedEncoding: analysis.obfuscatedEncoding,
   };
 }
 
