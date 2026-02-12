@@ -48,7 +48,9 @@ export type InjectionCategory =
   | 'credential_theft'
   | 'covert_execution'
   | 'social_engineering'
-  | 'obfuscated_encoding';
+  | 'obfuscated_encoding'
+  | 'tool_poisoning'
+  | 'supply_chain';
 
 export type Severity = 'HIGH' | 'MEDIUM' | 'LOW';
 
@@ -215,4 +217,89 @@ export interface FileScanOptions {
   exclude?: string[];
   skipLLM: boolean;
   recursive: boolean;
+}
+
+// ─── MCP Tool Poisoning Types ────────────────────────────────────
+
+export interface McpToolDefinition {
+  name: string;
+  description?: string;
+  inputSchema?: Record<string, unknown>;
+}
+
+export interface McpServerConfig {
+  command: string;
+  args?: string[];
+  env?: Record<string, string>;
+}
+
+export interface McpToolFinding {
+  serverName: string;
+  toolName?: string;
+  field: string;
+  severity: Severity;
+  category: string;
+  description: string;
+  matchedText: string;
+}
+
+export interface McpScanReport {
+  configPath: string;
+  serversScanned: number;
+  toolsScanned: number;
+  findings: McpToolFinding[];
+  riskLevel: RiskLevel;
+  scannedAt: string;
+}
+
+// ─── Supply Chain Types ──────────────────────────────────────────
+
+export interface SupplyChainFinding {
+  source: string;
+  field: string;
+  severity: Severity;
+  category: string;
+  description: string;
+  matchedText: string;
+}
+
+export interface SupplyChainReport {
+  targetPath: string;
+  manifestsScanned: number;
+  findings: SupplyChainFinding[];
+  riskLevel: RiskLevel;
+  manifests: { path: string; type: string; findingCount: number }[];
+  scannedAt: string;
+}
+
+// ─── Runtime Auditor Types ───────────────────────────────────────
+
+export interface AuditPolicy {
+  maxCallsPerMinute?: number;
+  blockedTools?: string[];
+  sensitivePathPatterns?: string[];
+  allowedDomains?: string[];
+  blockOnHighRisk?: boolean;
+}
+
+export interface ToolCallRecord {
+  toolName: string;
+  args: Record<string, unknown>;
+  timestamp: string;
+  risk: RiskLevel;
+  findings: AuditFinding[];
+  blocked: boolean;
+}
+
+export interface AuditFinding {
+  severity: Severity;
+  category: string;
+  description: string;
+  matchedText: string;
+}
+
+export interface AuditResult {
+  risk: RiskLevel;
+  findings: AuditFinding[];
+  blocked: boolean;
 }

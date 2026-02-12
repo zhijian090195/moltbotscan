@@ -1,6 +1,6 @@
 {
   "name": "moltbot-scan",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Moltbook Agent Trust Scanner SDK - Detect prompt injection, credential theft, and social engineering in agent messages",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -47,7 +47,11 @@
     "prompt-injection",
     "ai-safety",
     "middleware",
-    "sdk"
+    "sdk",
+    "mcp",
+    "tool-poisoning",
+    "supply-chain",
+    "runtime-audit"
   ],
   "license": "MIT",
   "dependencies": {

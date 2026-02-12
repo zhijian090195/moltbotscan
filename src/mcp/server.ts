@@ -5,15 +5,19 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { ContentScanner } from '../sdk/scanner.js';
 import { FileScanner } from '../core/file-scanner.js';
+import { McpConfigScanner } from './config-scanner.js';
+import { SupplyChainScanner } from '../supply-chain/scanner.js';
 import { existsSync } from 'fs';
 
 const server = new McpServer({
   name: 'agentshield',
-  version: '0.3.0',
+  version: '0.5.0',
 });
 
 const contentScanner = new ContentScanner();
 const fileScanner = new FileScanner();
+const mcpScanner = new McpConfigScanner();
+const supplyChainScanner = new SupplyChainScanner();
 
 // Tool 1: scan_content — scan text content for threats
 server.tool(
@@ -125,6 +129,87 @@ server.tool(
         },
       ],
     };
+  },
+);
+
+// Tool 3: scan_mcp_config — detect tool poisoning in MCP configs
+server.tool(
+  'scan_mcp_config',
+  'Scan an MCP configuration file for tool poisoning: hidden instructions in tool descriptions, suspicious commands, credential exposure, zero-width characters.',
+  {
+    config_path: z.string().describe('Absolute path to MCP config file (e.g. claude_desktop_config.json)'),
+  },
+  async ({ config_path }) => {
+    if (!existsSync(config_path)) {
+      return {
+        content: [{ type: 'text' as const, text: `Error: File not found: ${config_path}` }],
+        isError: true,
+      };
+    }
+
+    const report = mcpScanner.scanConfigFile(config_path);
+    const lines: string[] = [
+      `Config: ${report.configPath}`,
+      `Servers scanned: ${report.serversScanned}`,
+      `Risk: ${report.riskLevel}`,
+      `Findings: ${report.findings.length}`,
+    ];
+
+    if (report.findings.length > 0) {
+      lines.push('');
+      lines.push('Findings:');
+      for (const f of report.findings) {
+        const target = f.toolName ? `${f.serverName}/${f.toolName}` : f.serverName;
+        lines.push(`  [${f.severity}] ${f.category}: ${f.description}`);
+        lines.push(`    ${target} -> ${f.field}: ${f.matchedText}`);
+      }
+    }
+
+    return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+  },
+);
+
+// Tool 4: scan_supply_chain — scan agent manifests and skill repos
+server.tool(
+  'scan_supply_chain',
+  'Scan agent manifests, skill repos, and plugin configs for supply chain threats: poisoned definitions, suspicious URLs, excessive permissions, hidden content.',
+  {
+    path: z.string().describe('Absolute path to directory or manifest file to scan'),
+  },
+  async ({ path }) => {
+    if (!existsSync(path)) {
+      return {
+        content: [{ type: 'text' as const, text: `Error: Path not found: ${path}` }],
+        isError: true,
+      };
+    }
+
+    const report = supplyChainScanner.scan(path);
+    const lines: string[] = [
+      `Target: ${report.targetPath}`,
+      `Manifests scanned: ${report.manifestsScanned}`,
+      `Risk: ${report.riskLevel}`,
+      `Findings: ${report.findings.length}`,
+    ];
+
+    if (report.manifests.length > 0) {
+      lines.push('');
+      lines.push('Manifests:');
+      for (const m of report.manifests) {
+        lines.push(`  ${m.path} (${m.type}, ${m.findingCount} findings)`);
+      }
+    }
+
+    if (report.findings.length > 0) {
+      lines.push('');
+      lines.push('Findings:');
+      for (const f of report.findings) {
+        lines.push(`  [${f.severity}] ${f.category}: ${f.description}`);
+        lines.push(`    ${f.source} -> ${f.field}: ${f.matchedText}`);
+      }
+    }
+
+    return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
   },
 );
 
